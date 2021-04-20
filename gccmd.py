@@ -4,8 +4,13 @@ import discord
 import asyncio
 from tinydb import TinyDB
 from gcclasses import GCPlayer
+from gcclasses import GCEnemy
+import gcfighting
+import gccfg
+import shlex
 
 GCplayers = TinyDB("./GCplayers.json")
+GCenemies = TinyDB("./GCenemies.json")
 
 #this part defines commands
 cmd_prfx = '~'
@@ -25,6 +30,14 @@ goto_txt = 'goto'
 order_txt = 'order'
 db_txt = 'database'
 map_txt = 'map'
+spawn_txt = 'spawn'
+lookout_txt = 'lookout'
+fight_txt = 'fight'
+test_txt = 'test'
+list_spells_txt = 'spelllist'
+known_spells_txt = 'spells'
+learn_spell_txt = 'learnspell'
+queue_spell_txt = 'qspell'
 
 #this part assigns locations with their chanenl ID
 study_hall_channel_id = 788095887884288052
@@ -170,6 +183,183 @@ async def map_cmd(msg):
     response = "mall, study hall, cafe, downtown"
     await msg.channel.send('*' + str(msg.author.display_name) + ':* ' + response)
 
+'''
+    Spawn an enemy
+'''
+async def spawn_enemy(msg):
+    id = 0
+    while gcdb.getEnemyData(id):
+        id += 1
+    spawned = GCEnemy(
+        id = id,
+        name = "generic",
+        location = "downtown",
+        size = random.randrange(1,5)
+    )
+
+    response = "Spawned " + spawned.name + " with id " + str(spawned.id) + " and " + str(spawned.attacks) + " for attacks."
+    await msg.channel.send('*' + str(msg.author.display_name) + ':* ' + response)
+
+'''
+    Return enemies in user's current district
+'''
+async def lookout(msg):
+    user_data = GCPlayer(userid = msg.author.id)
+    enemies = gcdb.findEnemies("location", user_data.location)
+
+    response = "In " + user_data.location + " you see: \n"
+    if enemies:
+        for enemy_data in enemies:
+            response += "\nA size {} {}. ID: {}".format(str(enemy_data["size"]), enemy_data["name"], enemy_data["id"])
+
+    await msg.channel.send('*' + str(msg.author.display_name) + ':* ' + response)
+
+'''
+    Initiate combat sequence
+'''
+async def fight(msg):
+    target_id = int(msg.content.split(' ', 1)[1])
+    enemy_data = gcdb.getEnemyData(target_id)
+
+    response = ""
+    if enemy_data:
+        enemy = GCEnemy(id = target_id)
+        player = GCPlayer(userid = msg.author.id)
+        if enemy.location != player.location:
+            response = "That enemy is not present here."
+        else:
+            await gcfighting.initiate_combat(enemy, player, msg)
+            return
+    else:
+        response = "No enemy with id {} exists".format(target_id)
+
+    await msg.channel.send('*' + str(msg.author.display_name) + ':* ' + response)
+
+'''
+    Fill in with whatever to test certain functionality
+'''
+async def test(msg):
+    player = GCPlayer(userid = msg.author.id)
+    player.lofi -= 1
+    player.money += 1
+    player.persist()
+
+'''
+    List all spells available for players to learn
+'''
+async def list_spells(msg):
+    # compile all user usable spell names
+    player_spell_names = []
+    for spell in gccfg.spells:
+        if gccfg.spell_user_player in spell.users:
+            player_spell_names.append(spell.name)
+
+    # Build and send response
+    response = "Currently learnable spells are: \n"
+    for name in player_spell_names:
+        response += "\n" + name
+
+    await msg.channel.send('*' + str(msg.author.display_name) + ':* ' + response)
+
+'''
+    List all spells known by player
+'''
+async def known_spells(msg):
+    # compile all user usable spell names
+    player = GCPlayer(userid = msg.author.id)
+    player_spells = []
+    for spell_name in player.known_spells:
+        if spell_name in gccfg.spell_map:
+            player_spells.append(gccfg.spell_map[spell_name])
+
+    # Build and send response
+    response = "Currently known spells are: \n"
+    for spell in player_spells:
+        response += "\nName: {} | Cost: {}".format(spell.name, spell.cost)
+
+    await msg.channel.send('*' + str(msg.author.display_name) + ':* ' + response)
+
+'''
+    add spell to player's known spells
+'''
+async def learn_spell(msg):
+    target_spell_name = msg.content.split(' ', 1)[1]
+    if target_spell_name in gccfg.spell_map:
+        spell = gccfg.spell_map[target_spell_name]
+        player = GCPlayer(userid = msg.author.id)
+        player.known_spells.append(spell.name)
+        player.persist()
+        response = "You have successfully learned {}".format(spell.name)
+    else:
+        response = "{} isn't a real spell dummy. Try {}{}".format(target_spell_name, cmd_prfx, list_spells_txt)
+
+    await msg.channel.send('*{}:* {}'.format(msg.author.display_name, response))
+
+'''
+    Queue a spell for the current fight is user is in one and can queue
+'''
+async def queue_spell(msg):
+    # Parse target spell and get player
+    target_spell_name = shlex.split(msg.content)[1]
+    player = GCPlayer(userid = msg.author.id)
+
+    # Ensure spell exists and is known
+    if (target_spell_name in gccfg.spell_map and gccfg.spell_map[target_spell_name].name in player.known_spells):
+        spell = gccfg.spell_map[target_spell_name].new_copy()
+        # Check for fight and ensure player participation
+        if player.location in gcfighting.fights:
+            fight = gcfighting.fights[player.location]
+            if player.userid in fight.player_ids:
+                # TODO - add point system and ensure player can cast
+                if player.lofi > spell.cost:
+                    response = ""
+
+                    # Parse target for targeted spells
+                    if spell.type == gccfg.spell_type_heal_target:
+                        mentions = msg.mentions
+                        if len(mentions) == 1:
+                            spell.target_id = mentions[0].id
+                            if spell.target_id not in fight.player_ids:
+                                response = "The target must be fighting with you!"
+                        if len(mentions) < 1:
+                            response = "You need to mention a target!"
+                        if len(mentions) > 1:
+                            response = "This spell can only target one player"
+
+                    if response != "":
+                        await msg.channel.send('*{}:* {}'.format(msg.author.display_name, response))
+                        return
+
+                    player.lofi -= int(spell.cost)
+                    fight.player_queue.append(spell)
+
+                    # Build list of enemy names for flavortext
+                    enemy_names = ""
+                    enemy_number = 0
+                    for enemy_id in fight.enemy_ids:
+                        enemy_number += 1
+                        enemy = GCEnemy(id = enemy_id)
+                        if enemy_number > 1 and enemy_number == len(fight.enemy_ids):
+                            enemy_names += ", and {} id: {}".format(enemy.name, enemy.id)
+                        elif enemy_number > 1:
+                            enemy_names += ", {} id: {}".format(enemy.name, enemy.id)
+                        else:
+                            enemy_names += "{} id: {}".format(enemy.name, enemy.id)
+
+                    response = "Successfully queued {} against {} for {} lofi".format(spell.name, enemy_names, spell.cost)
+
+                    player.persist()
+                else:
+                    response = "You only have {} lofi! You need {} to queue that.".format(player.lofi, spell.cost)
+            else:
+                response = "You are not participating in the present fight."
+        else:
+            response = "There are no fights to attack for here."
+    else:
+        response = "You don't know that spell."
+
+    await msg.channel.send('*{}:* {}'.format(msg.author.display_name, response))
+
 # Create cmd dictionary
 cmd_dict = {
     study_txt : study_cmd,
@@ -182,4 +372,12 @@ cmd_dict = {
     register_txt : register_cmd,
     db_txt : db_cmd,
     map_txt : map_cmd,
+    spawn_txt : spawn_enemy,
+    lookout_txt : lookout,
+    fight_txt : fight,
+    test_txt : test,
+    list_spells_txt : list_spells,
+    known_spells_txt : known_spells,
+    learn_spell_txt : learn_spell,
+    queue_spell_txt : queue_spell
 }
