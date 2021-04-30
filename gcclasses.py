@@ -24,14 +24,27 @@ class GCPlayer:
             self.new = False
         # Or initialize from given values
         except:
-            if SavedData:
-                gcdb.setPlayerAttribute(userid, 'id', str(userid) + "_deprecated")
+            # Set defaults
             self.userid = userid
             self.location = location
             self.purity = purity
             self.lofi = lofi
             self.money = money
             self.known_spells = known_spells
+
+            # If there was saved data that otherwise failed to set, set those values
+            if SavedData:
+                # Relabel old entry
+                gcdb.setPlayerAttribute(userid, 'id', str(userid) + "_deprecated")
+                for key in SavedData:
+                    try:
+                        # Don't move data that isn't included in the defaults
+                        # getatt will throw an error so the except statement runs
+                        self.__getattribute__(key)
+                        self.__setattr__(key, SavedData[key])
+                    except:
+                        print("Failed to move old value for " + key + " for " + str(userid))
+
             gcdb.createEntry(self)
             self.new = True
 
@@ -45,6 +58,27 @@ class GCPlayer:
                 # Only Bother with changed values
                 # We do a little bothering with unchanged values for the time being cause known_spells wasnt working
                 gcdb.setPlayerAttribute(self.userid, key, getattr(self, key))
+
+    """ Handle loss of health """
+    def change_hp(self, amount, source):
+        self.lofi += amount
+        if self.lofi <= 0:
+            self.die(source)
+        self.persist()
+
+    """ 
+        Handle everything that might happen on death, resetting to a hosopital
+        losing some money, maybe some purity, etc
+    """
+    def die(self, source):
+        if source == gccfg.damage_source_combat:
+            gccfg.fights[self.location].player_ids.remove(self.userid)
+            # TODO: potential monster buffs for kills
+        self.money -= gccfg.death_cost
+        self.lofi = 0
+        # Lower purity tier or something?
+        self.location  = "downtown"
+        self.persist()
 
 class GCEnemy:
     # Set default values
@@ -70,8 +104,8 @@ class GCEnemy:
             self.name = name
             self.location = location
             self.size = size
-            self.hp = self.SizeToHP(size)
-            self.attacks = self.getAttacks(size)
+            self.hp = self.SizeToHP(size) if hp == 0 else hp
+            self.attacks = self.getAttacks(size) if attacks == [] else attacks
             gcdb.createEnemyEntry(self)
 
     """ Save new data to the database """
@@ -97,3 +131,14 @@ class GCEnemy:
                 attacks.append(spell.name)
         return attacks
 
+    def changeHp(self, amount):
+        self.hp += amount
+        if self.hp <= 0:
+            self.die()
+        else:
+            self.persist()
+
+    def die(self):
+        gcdb.deleteEnemy(self.id)
+        gccfg.fights[self.location].enemy_ids.remove(self.id)
+        # TODO: distribute rewards to players left in fight?

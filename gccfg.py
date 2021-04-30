@@ -1,5 +1,13 @@
 from gcspells import GCSpell
 
+fights = {}
+
+damage_source_combat = "combat"
+
+death_cost = 20
+
+pts_per_round = 30
+
 spell_user_player = "players"
 spell_user_enemy = "enemies"
 spell_type_damage = "damage"

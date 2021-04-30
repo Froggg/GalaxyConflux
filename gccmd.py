@@ -307,48 +307,52 @@ async def queue_spell(msg):
     if (target_spell_name in gccfg.spell_map and gccfg.spell_map[target_spell_name].name in player.known_spells):
         spell = gccfg.spell_map[target_spell_name].new_copy()
         # Check for fight and ensure player participation
-        if player.location in gcfighting.fights:
-            fight = gcfighting.fights[player.location]
+        if player.location in gccfg.fights:
+            fight = gccfg.fights[player.location]
             if player.userid in fight.player_ids:
-                # TODO - add point system and ensure player can cast
+                # TODO - add point system
                 if player.lofi > spell.cost:
-                    response = ""
+                    if spell.cost <= fight.pts_remaining[player.userid]:
+                        response = ""
 
-                    # Parse target for targeted spells
-                    if spell.type == gccfg.spell_type_heal_target:
-                        mentions = msg.mentions
-                        if len(mentions) == 1:
-                            spell.target_id = mentions[0].id
-                            if spell.target_id not in fight.player_ids:
-                                response = "The target must be fighting with you!"
-                        if len(mentions) < 1:
-                            response = "You need to mention a target!"
-                        if len(mentions) > 1:
-                            response = "This spell can only target one player"
+                        # Parse target for targeted spells
+                        if spell.type == gccfg.spell_type_heal_target:
+                            mentions = msg.mentions
+                            if len(mentions) == 1:
+                                spell.target_id = mentions[0].id
+                                if spell.target_id not in fight.player_ids:
+                                    response = "The target must be fighting with you!"
+                            if len(mentions) < 1:
+                                response = "You need to mention a target!"
+                            if len(mentions) > 1:
+                                response = "This spell can only target one player"
 
-                    if response != "":
-                        await msg.channel.send('*{}:* {}'.format(msg.author.display_name, response))
-                        return
+                        if response != "":
+                            await msg.channel.send('*{}:* {}'.format(msg.author.display_name, response))
+                            return
 
-                    player.lofi -= int(spell.cost)
-                    fight.player_queue.append(spell)
+                        player.lofi -= int(spell.cost)
+                        fight.pts_remaining[player.userid] -= int(spell.cost)
+                        fight.player_queue.append(spell)
 
-                    # Build list of enemy names for flavortext
-                    enemy_names = ""
-                    enemy_number = 0
-                    for enemy_id in fight.enemy_ids:
-                        enemy_number += 1
-                        enemy = GCEnemy(id = enemy_id)
-                        if enemy_number > 1 and enemy_number == len(fight.enemy_ids):
-                            enemy_names += ", and {} id: {}".format(enemy.name, enemy.id)
-                        elif enemy_number > 1:
-                            enemy_names += ", {} id: {}".format(enemy.name, enemy.id)
-                        else:
-                            enemy_names += "{} id: {}".format(enemy.name, enemy.id)
+                        # Build list of enemy names for flavortext
+                        enemy_names = ""
+                        enemy_number = 0
+                        for enemy_id in fight.enemy_ids:
+                            enemy_number += 1
+                            enemy = GCEnemy(id = enemy_id)
+                            if enemy_number > 1 and enemy_number == len(fight.enemy_ids):
+                                enemy_names += ", and {} id: {}".format(enemy.name, enemy.id)
+                            elif enemy_number > 1:
+                                enemy_names += ", {} id: {}".format(enemy.name, enemy.id)
+                            else:
+                                enemy_names += "{} id: {}".format(enemy.name, enemy.id)
 
-                    response = "Successfully queued {} against {} for {} lofi".format(spell.name, enemy_names, spell.cost)
+                        response = "Successfully queued {} against {} for {} lofi".format(spell.name, enemy_names, spell.cost)
 
-                    player.persist()
+                        player.persist()
+                    else:
+                        response = "You only have {} points remaining! that spell costs {}.".format(fight.pts_remaining[player.userid], spell.cost)
                 else:
                     response = "You only have {} lofi! You need {} to queue that.".format(player.lofi, spell.cost)
             else:
