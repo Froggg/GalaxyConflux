@@ -33,3 +33,10 @@ async def update_member_role(member):
 
     #print(roles_to_add)
     await member.add_roles(*roles_to_add)
+
+def copy_list(target):
+    copy = []
+    for val in target:
+        copy.append(val)
+
+    return copy
