@@ -10,6 +10,7 @@ async def on_ready():
 
     #load config jsons and get discord channels and roles
     gcloader.generate_cmd_map()
+    gcloader.generate_spell_map()
     await gcloader.generate_channel_map()
     await gcloader.generate_role_map()
 
@@ -41,6 +42,6 @@ token = f.readline().strip()
 
 # connect to discord
 try:
-	client.run(token)
+    client.run(token)
 except:
     print("could not connect to discord with token")

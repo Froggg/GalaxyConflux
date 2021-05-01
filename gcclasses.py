@@ -62,11 +62,12 @@ class GCPlayer:
             'location': self.location,
             'purity': self.purity,
             'lofi': self.lofi,
-            'money': self.money
+            'money': self.money,
+            'known_spells': self.known_spells
         },
         User.id == self.userid
         )
-        print("UPSERT")
+        #print("UPSERT")
         """
         # Grab existing data
         SavedData = gcdb.getPlayerData(self.userid)
@@ -201,3 +202,42 @@ class GCLocation:
             print(f"{self.id} location has no look text")
         if (self.channel_id == None):
             print(f"there is no #{self.id} channel")
+
+class GCSpell:
+    # Create the spell object
+    def __init__(
+            self,
+            name = "",
+            json_entry = None,
+            aliases = [],
+            type = "",
+            power = 0,
+            cost = 0,
+            users = []
+    ):
+        if json_entry:
+            self.name = name
+            self.aliases = json_entry.get("aliases")
+            self.aliases.append(self.name)
+            self.aliases.append(self.name.lower())
+            self.type = json_entry.get("type")
+            self.power = json_entry.get("power")
+            self.cost = json_entry.get("cost")
+            self.users = json_entry.get("users")
+        else:
+            self.name = name
+            self.aliases = aliases
+            self.type = type
+            self.power = power
+            self.cost = cost
+            self.users = users
+
+    # Returns a unique instance
+    def new_copy(self):
+        return (GCSpell(
+            name = self.name,
+            type = self.type,
+            power = self.power,
+            cost = self.cost,
+            users = self.users
+        ))

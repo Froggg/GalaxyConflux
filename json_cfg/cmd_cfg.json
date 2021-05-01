@@ -42,5 +42,33 @@
     "map_cmd": {
         "command_names": ["map"],
         "function" : "map_cmd"
+    },
+    "spawn_cmd": {
+        "command_names": ["spawn"],
+        "function" : "spawn_enemy"
+    },
+    "lookout_cmd": {
+        "command_names": ["lookout"],
+        "function" : "lookout_cmd"
+    },
+    "fight_cmd": {
+        "command_names": ["fight"],
+        "function" : "fight"
+    },
+    "spell_list_cmd": {
+        "command_names": ["spelllist", "listspells"],
+        "function" : "list_spells"
+    },
+    "known_spells_cmd": {
+        "command_names": ["spells"],
+        "function" : "known_spells"
+    },
+    "learn_spell_cmd": {
+        "command_names": ["learnspell"],
+        "function" : "learn_spell"
+    },
+    "queue_spell_cmd": {
+        "command_names": ["qspell", "queue"],
+        "function" : "queue_spell"
     }
 }

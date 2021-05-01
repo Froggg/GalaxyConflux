@@ -1,1 +1,1 @@
-{"_default": {"3": {"id": 2, "name": "generic", "location": "downtown", "size": 4, "hp": 38, "attacks": ["Throw Something!"]}, "5": {"id": 1, "name": "generic", "location": "downtown", "size": 1, "hp": 9, "attacks": ["Throw Something!"]}}}
+{"_default": {"5": {"id": 1, "name": "generic", "location": "downtown", "size": 1, "hp": 9, "attacks": ["Throw Something!"]}}}

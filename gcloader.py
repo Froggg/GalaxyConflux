@@ -5,6 +5,7 @@ import importlib
 from pprint import pprint
 
 from gcclasses import GCLocation
+from gcclasses import GCSpell
 import gccfg
 
 
@@ -96,3 +97,18 @@ async def generate_role_map():
 
 
     #pprint(gccfg.role_map)
+
+def generate_spell_map():
+    gccfg.spell_map = {}
+
+    # grab spell json
+    f = open(os.path.join('json_cfg','spell_cfg.json'), encoding="utf8")
+    spells_json = json.load(f)
+    f.close()
+
+    # construct GCLocation objects and map to location id
+    for spell_name in spells_json:
+        spell_obj = GCSpell(spell_name, json_entry=spells_json[spell_name])
+        gccfg.spells.append(spell_obj)
+        for alias in spell_obj.aliases:
+            gccfg.spell_map.update({alias: spell_obj})

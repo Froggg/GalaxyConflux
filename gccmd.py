@@ -3,7 +3,10 @@ import random
 import discord
 import asyncio
 from tinydb import TinyDB
-from gcclasses import GCPlayer
+import gcfighting
+import gccfg
+from gcclasses import GCPlayer, GCEnemy
+import shlex
 
 from gcutility import sent_message, update_member_role
 
@@ -227,7 +230,7 @@ async def spawn_enemy(msg):
 '''
     Return enemies in user's current district
 '''
-async def lookout(msg):
+async def lookout_cmd(msg):
     user_data = GCPlayer(userid = msg.author.id)
     enemies = gcdb.findEnemies("location", user_data.location)
 
@@ -308,6 +311,7 @@ async def known_spells(msg):
 '''
 async def learn_spell(msg):
     target_spell_name = msg.content.split(' ', 1)[1]
+
     if target_spell_name in gccfg.spell_map:
         spell = gccfg.spell_map[target_spell_name]
         player = GCPlayer(userid = msg.author.id)
@@ -315,7 +319,7 @@ async def learn_spell(msg):
         player.persist()
         response = "You have successfully learned {}".format(spell.name)
     else:
-        response = "{} isn't a real spell dummy. Try {}{}".format(target_spell_name, cmd_prfx, list_spells_txt)
+        response = "{} isn't a real spell dummy. Try {}{}".format(target_spell_name, gccfg.cmd_prefix, "listspells")
 
     await msg.channel.send('*{}:* {}'.format(msg.author.display_name, response))
 

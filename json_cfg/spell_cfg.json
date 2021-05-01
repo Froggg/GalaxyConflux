@@ -1,0 +1,44 @@
+{
+  "Throw Something!": {
+    "aliases" : ["basicdamage"],
+    "type" : "damage",
+    "power" : 1,
+    "cost" : 1,
+    "users" : ["players", "enemies"]
+  },
+  "Block Your Face!" : {
+    "aliases" : ["basicblock"],
+    "type" : "defense",
+    "power" : 1,
+    "cost" : 1, 
+    "users" : ["players"]
+  },
+  "Heal a Friend!" : {
+    "aliases" : ["targetheal"],
+    "type" : "heal_target",
+    "power" : 5,
+    "cost" : 1,
+    "users" : ["players"]
+  },
+  "Heal Everyone!" : {
+    "aliases" : ["blanketheal"],
+    "type" : "heal_aoe",
+    "power" : 1,
+    "cost" : 1,
+    "users" : ["players"]
+  },
+  "Power Up!" : {
+    "aliases" : ["atkbuff"],
+    "type" : "attack_buff",
+    "power" : 1,
+    "cost" : 1,
+    "users" : ["players"]
+  },
+  "Friendship Shield?" : {
+    "aliases" : ["defbuff"],
+    "type" : "defense_buff",
+    "power" : 1,
+    "cost" : 1,
+    "users" : ["players"]
+  }
+}
